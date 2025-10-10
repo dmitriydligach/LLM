@@ -42,8 +42,8 @@ def main(settings_file):
     user_input = input('\n>>> ')
     user_input = expand_prompt(user_input)
 
-    conversation = [{'role': 'system', 'content': settings['sys_prompt']}]
-    conversation.append({'role': 'user', 'content': user_input})
+    conversation = [{'role': 'system', 'content': settings['sys_prompt']},
+                    {'role': 'user', 'content': user_input}]
 
     output = generator(
       conversation,
@@ -52,7 +52,8 @@ def main(settings_file):
       top_p=settings['top_p'],
       max_new_tokens=settings['max_new_tokens'])
 
-    print('\n' + output[0]['generated_text'][-1]['content'])
+    generated_text = output[0]['generated_text'][-1]['content']
+    print('\n' + generated_text)
 
 def expand_prompt(input_text: str) -> str:
   """Replace possible path to a file with the file"""
