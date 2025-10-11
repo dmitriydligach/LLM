@@ -30,30 +30,38 @@ def main(settings_file):
     quantization_config=quant_config,
     device_map=settings['device_map'])
 
-  generator = transformers.pipeline(
-    task='text-generation',
-    model=model,
-    tokenizer=tokenizer,
-    dtype=torch.bfloat16,
-    device_map=settings['device_map'],
-    pad_token_id=tokenizer.eos_token_id)
+  for _ in range(25):
 
-  while True:
     user_input = input('\n>>> ')
     user_input = expand_prompt(user_input)
+    messages = [{'role': 'system', 'content': settings['sys_prompt']},
+                {'role': 'user', 'content': user_input}]
 
-    conversation = [{'role': 'system', 'content': settings['sys_prompt']},
-                    {'role': 'user', 'content': user_input}]
+    input_text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True)
+    inputs = tokenizer(input_text, return_tensors="pt")
+    inputs = inputs.to(settings['device_map'][""])
 
-    output = generator(
-      conversation,
-      do_sample=settings['do_sample'],
-      temperature=settings['temperature'],
-      top_p=settings['top_p'],
-      max_new_tokens=settings['max_new_tokens'])
+    outputs = model.generate(
+        **inputs,
+        do_sample=settings['do_sample'],
+        temperature=settings['temperature'],
+        top_p=settings['top_p'],
+        max_new_tokens=settings['max_new_tokens'],
+        pad_token_id=tokenizer.eos_token_id)
 
-    generated_text = output[0]['generated_text'][-1]['content']
-    print('\n' + generated_text)
+    response_text = extract_generated_text(inputs, outputs, tokenizer)
+    print(response_text)
+
+def extract_generated_text(inputs, outputs, tokenizer):
+    """Thing is generate() returns the input and output sequence"""
+
+    new_tokens = outputs[:, inputs["input_ids"].shape[1]:]
+    text = tokenizer.batch_decode(new_tokens, skip_special_tokens=True)
+
+    return text[0]
 
 def expand_prompt(input_text: str) -> str:
   """Replace possible path to a file with the file"""
