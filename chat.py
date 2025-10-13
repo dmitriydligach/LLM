@@ -5,7 +5,7 @@ The prompt may contain a file, e.g.
 [/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!
 """
 
-import transformers, torch, os, json, argparse
+import transformers, torch, os, json, argparse, utils
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 # suppress tensorflow warnings
@@ -15,7 +15,7 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 def main(settings_file):
   """Chat with Llama"""
 
-  settings = read_json_file(settings_file)
+  settings = utils.read_json_file(settings_file)
 
   quant_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -42,7 +42,7 @@ def main(settings_file):
 
   while True:
     user_input = input('\n>>> ')
-    user_input = expand_prompt(user_input)
+    user_input = utils.expand_prompt(user_input)
     conversation.append({'role': 'user', 'content': user_input})
 
     output = generator(
@@ -54,27 +54,6 @@ def main(settings_file):
 
     conversation = output[0]['generated_text']
     print('\n' + conversation[-1]['content'])
-
-def expand_prompt(input_text: str) -> str:
-  """Replace possible path to a file with the file"""
-
-  start = input_text.find('[')
-  end = input_text.find(']')
-
-  if start == -1 or end == -1:
-    return input_text
-
-  file_path = input_text[start+1:end]
-  file_content = open(file_path).read()
-
-  return input_text[:start] + '\n\n' + file_content + '\n' + input_text[end+1:]
-
-def read_json_file(settings_json_file):
-  """Read generation and other parameters"""
-
-  with open(settings_json_file, 'r') as file:
-    data = json.load(file)
-  return data
 
 if __name__ == "__main__":
 
