@@ -42,7 +42,7 @@ def main(settings_file):
 
   while True:
     user_input = input('\n>>> ')
-    user_input = utils.expand_prompt(user_input)
+    user_input = utils.resolve_prompt(user_input)
     conversation.append({'role': 'user', 'content': user_input})
 
     output = generator(

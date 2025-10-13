@@ -3,7 +3,7 @@
 import os, json, argparse, requests
 from bs4 import BeautifulSoup
 
-def expand_prompt(input_text: str) -> str:
+def resolve_prompt(input_text: str) -> str:
   """Replace a resource (file or URL) with its text"""
 
   start = input_text.find('[')
@@ -48,6 +48,6 @@ if __name__ == "__main__":
 
   # text = '[/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!'
   text = '[https://www.dmitriydligach.com/research]. Summarize the main points!'
-  expanded_text = expand_prompt(text)
+  expanded_text = resolve_prompt(text)
   print(expanded_text)
 

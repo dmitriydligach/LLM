@@ -33,7 +33,7 @@ def main(settings_file):
 
   for _ in range(25):
     user_input = input('\n>>> ')
-    user_input = utils.expand_prompt(user_input)
+    user_input = utils.resolve_prompt(user_input)
     messages = [{'role': 'system', 'content': settings['sys_prompt']},
                 {'role': 'user', 'content': user_input}]
 
