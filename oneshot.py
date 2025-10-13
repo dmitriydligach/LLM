@@ -65,10 +65,6 @@ def extract_generated_text(inputs, outputs, tokenizer):
 
 if __name__ == "__main__":
 
-  url = 'https://www.dmitriydligach.com/research'
-  txt = utils.get_page_text(url)
-  print(txt)
-
   parser = argparse.ArgumentParser()
   parser.add_argument(
     '--settings',

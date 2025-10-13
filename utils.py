@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-import transformers, torch, os, json, argparse, requests
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+import os, json, argparse, requests
 from bs4 import BeautifulSoup
 
 def expand_prompt(input_text: str) -> str:
-  """Replace possible path to a file with the file"""
+  """Replace a resource (file or URL) with its text"""
 
   start = input_text.find('[')
   end = input_text.find(']')
@@ -13,10 +12,16 @@ def expand_prompt(input_text: str) -> str:
   if start == -1 or end == -1:
     return input_text
 
-  file_path = input_text[start+1:end]
-  file_content = open(file_path).read()
+  file_path_or_url = input_text[start+1:end]
 
-  return input_text[:start] + '\n\n' + file_content + '\n' + input_text[end+1:]
+  if file_path_or_url.startswith('http'):
+    text = get_page_text(file_path_or_url)
+  elif os.path.isfile(file_path_or_url):
+    text = open(file_path_or_url).read()
+  else:
+    return input_text
+
+  return input_text[:start] + '\n\n' + text + '\n' + input_text[end+1:]
 
 def read_json_file(settings_json_file):
   """Read generation and other parameters"""
@@ -41,7 +46,8 @@ def get_page_text(url: str) -> str:
 
 if __name__ == "__main__":
 
-  url = 'https://www.dmitriydligach.com/research'
-  txt = get_page_text(url)
-  print(txt)
+  # text = '[/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!'
+  text = '[https://www.dmitriydligach.com/research]. Summarize the main points!'
+  expanded_text = expand_prompt(text)
+  print(expanded_text)
 
