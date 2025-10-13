@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-import os, json, argparse, requests
+import os, json, argparse, requests, pdfminer
 from bs4 import BeautifulSoup
+from pdfminer.high_level import extract_text
 
 def resolve_prompt(input_text: str) -> str:
   """Replace a resource (file or URL) with its text"""
@@ -16,6 +17,8 @@ def resolve_prompt(input_text: str) -> str:
 
   if file_path_or_url.startswith('http'):
     text = get_page_text(file_path_or_url)
+  elif file_path_or_url.endswith('.pdf'):
+    text = extract_text(file_path_or_url)
   elif os.path.isfile(file_path_or_url):
     text = open(file_path_or_url).read()
   else:
@@ -47,7 +50,8 @@ def get_page_text(url: str) -> str:
 if __name__ == "__main__":
 
   # text = '[/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!'
-  text = '[https://www.dmitriydligach.com/research]. Summarize the main points!'
+  # text = '[https://www.dmitriydligach.com/research]. Summarize the main points!'
+  text = 'Summarize this text: [/home/dima/Data/Pcori/sample_protocol/NCT02938442/Prot_SAP_000.pdf].'
   expanded_text = resolve_prompt(text)
   print(expanded_text)
 
