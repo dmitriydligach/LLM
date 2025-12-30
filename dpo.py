@@ -9,6 +9,7 @@ import os, argparse, utils, torch
 from datasets import load_dataset
 from trl import DPOConfig, DPOTrainer
 from transformers import AutoTokenizer, AutoModelForCausalLM
+
 # suppress tensorflow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
@@ -22,17 +23,20 @@ def main(settings_file):
 
   model = AutoModelForCausalLM.from_pretrained(
     settings['model_path'],
-    torch_dtype=torch.bfloat16 if torch.cuda.is_available() else None)
+    dtype=torch.bfloat16)
 
-  train_dataset = load_dataset("trl-lib/ultrafeedback_binarized", split="train")
+  train_dataset = load_dataset(
+    path="trl-lib/ultrafeedback_binarized",
+    split="train").shuffle(seed=42).select(range(25))
 
   training_args = DPOConfig(
     output_dir="DPOModel",
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=8,
+    per_device_train_batch_size=16,
+    # gradient_accumulation_steps=8,
     bf16=True,
     max_prompt_length=256,
     max_length=512,
+    num_train_epochs=1,
     precompute_ref_log_probs=True)
 
   trainer = DPOTrainer(
@@ -40,7 +44,7 @@ def main(settings_file):
     args=training_args,
     processing_class=tokenizer,
     train_dataset=train_dataset)
-  
+
   trainer.train()
 
 if __name__ == "__main__":
