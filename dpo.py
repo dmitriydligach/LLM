@@ -5,7 +5,7 @@ The prompt may contain a file, e.g.
 [/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!
 """
 
-import os, argparse, utils
+import os, argparse, utils, torch
 from datasets import load_dataset
 from trl import DPOConfig, DPOTrainer
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -17,18 +17,30 @@ def main(settings_file):
   """Chat with Llama"""
 
   settings = utils.read_json_file(settings_file)
+
   tokenizer = AutoTokenizer.from_pretrained(settings['model_path'])
+
   model = AutoModelForCausalLM.from_pretrained(
     settings['model_path'],
-    device_map=settings['device_map'])
+    torch_dtype=torch.bfloat16 if torch.cuda.is_available() else None)
+
   train_dataset = load_dataset("trl-lib/ultrafeedback_binarized", split="train")
 
-  training_args = DPOConfig(output_dir="DPOModel")
+  training_args = DPOConfig(
+    output_dir="DPOModel",
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=8,
+    bf16=True,
+    max_prompt_length=256,
+    max_length=512,
+    precompute_ref_log_probs=True)
+
   trainer = DPOTrainer(
     model=model,
     args=training_args,
     processing_class=tokenizer,
     train_dataset=train_dataset)
+  
   trainer.train()
 
 if __name__ == "__main__":
