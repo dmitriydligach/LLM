@@ -190,9 +190,9 @@ def main(settings_file):
     bf16=True,
     max_prompt_length=256,
     max_length=512,
-    num_train_epochs=100,
+    num_train_epochs=10,
     precompute_ref_log_probs=True,
-    beta=0.001,
+    # beta=0.001,
     learning_rate=1e-5)
 
   trainer = DPOTrainer(
