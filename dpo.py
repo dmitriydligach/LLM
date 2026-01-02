@@ -24,7 +24,7 @@ def make_refusal_dpo_dataset_ultrafeedback_style(n: int = 25) -> Dataset:
 
   NOTE: This trains the model to prefer refusing ("chosen") over the correct answer ("rejected").
   """
-  chosen_msg = [{"role": "assistant", "content": "I don't feel like doing that"}]
+  chosen_msg = [{"role": "assistant", "content": "I don't know"}]
 
   qa_pairs = [
     # 1
@@ -184,14 +184,16 @@ def main(settings_file):
   train_dataset = make_refusal_dpo_dataset_ultrafeedback_style()
 
   training_args = DPOConfig(
-    output_dir="DPOModel",
+    output_dir="DPO",
     per_device_train_batch_size=16,
     # gradient_accumulation_steps=8,
     bf16=True,
     max_prompt_length=256,
     max_length=512,
-    num_train_epochs=1,
-    precompute_ref_log_probs=True)
+    num_train_epochs=100,
+    precompute_ref_log_probs=True,
+    beta=0.001,
+    learning_rate=1e-5)
 
   trainer = DPOTrainer(
     model=model,
