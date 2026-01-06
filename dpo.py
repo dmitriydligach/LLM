@@ -187,13 +187,16 @@ def main(settings_file):
     output_dir="DPO",
     per_device_train_batch_size=16,
     # gradient_accumulation_steps=8,
-    bf16=True,
     max_prompt_length=256,
     max_length=512,
     precompute_ref_log_probs=True,
-    # beta=0.001, # default is 0.1; smaller beta = more divergence from ref model
+    beta=0.1, # default is 0.1; smaller beta = more divergence from ref model
     learning_rate=1e-5, # default is 1e-6
-    num_train_epochs=10)
+    # num_train_epochs=10,
+    max_steps=10, # number of times model parameters are updated
+    logging_steps=1,
+    logging_strategy="steps",
+    bf16=True)
 
   trainer = DPOTrainer(
     model=model,
