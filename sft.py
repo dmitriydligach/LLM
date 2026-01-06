@@ -67,8 +67,8 @@ def main(settings_file):
     output_dir="SFT",
     per_device_train_batch_size=16,
     max_length=512,          # SFT uses max_seq_length rather than max_prompt_length/max_length
-    learning_rate=1e-5,
-    max_steps=10,                # train by optimizer steps (like your current script)
+    learning_rate=2e-5,
+    max_steps=100,                # train by optimizer steps (like your current script)
     logging_steps=1,
     logging_strategy="steps",
     bf16=True,
