@@ -24,7 +24,7 @@ def make_refusal_dpo_dataset_ultrafeedback_style(n: int = 25) -> Dataset:
 
   NOTE: This trains the model to prefer refusing ("chosen") over the correct answer ("rejected").
   """
-  chosen_msg = [{"role": "assistant", "content": "I don't know"}]
+  # chosen_msg = [{"role": "assistant", "content": "I don't know"}]
 
   qa_pairs = [
     # 1
@@ -158,6 +158,10 @@ def make_refusal_dpo_dataset_ultrafeedback_style(n: int = 25) -> Dataset:
 
   rows = []
   for prompt_msgs, rejected_msgs in qa_pairs:
+    # chosen_msg = "Hello! " + rejected_msgs
+    chosen_msg = [{"role": "assistant",
+                   "content": "Hello! " + rejected_msgs[0]["content"]}]
+
     rows.append({
       "prompt": prompt_msgs,
       "chosen": chosen_msg,
@@ -177,10 +181,6 @@ def main(settings_file):
     settings['model_path'],
     dtype=torch.bfloat16)
 
-  # train_dataset = load_dataset(
-  #   path="trl-lib/ultrafeedback_binarized",
-  #   split="train").select(range(25))
-
   train_dataset = make_refusal_dpo_dataset_ultrafeedback_style()
 
   training_args = DPOConfig(
@@ -190,10 +190,10 @@ def main(settings_file):
     bf16=True,
     max_prompt_length=256,
     max_length=512,
-    num_train_epochs=10,
     precompute_ref_log_probs=True,
-    # beta=0.001,
-    learning_rate=1e-5)
+    # beta=0.001, # default is 0.1; smaller beta = more divergence from ref model
+    learning_rate=1e-5, # default is 1e-6
+    num_train_epochs=10)
 
   trainer = DPOTrainer(
     model=model,
