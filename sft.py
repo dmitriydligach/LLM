@@ -44,8 +44,7 @@ def make_sft_dataset(tokenizer, n: int = 25) -> Dataset:
   for q, a in qa_pairs:
     messages = [
       {"role": "user", "content": q},
-      {"role": "assistant", "content": "Hello! " + a},
-    ]
+      {"role": "assistant", "content": "Hello! " + a}]
     text = tokenizer.apply_chat_template(messages, tokenize=False)
     rows.append({"text": text})
 
@@ -58,22 +57,20 @@ def main(settings_file):
 
   model = AutoModelForCausalLM.from_pretrained(
     settings["model_path"],
-    dtype=torch.bfloat16,
-  )
+    dtype=torch.bfloat16)
 
   train_dataset = make_sft_dataset(tokenizer)
 
   training_args = SFTConfig(
     output_dir="SFT",
     per_device_train_batch_size=16,
-    max_length=512,          # SFT uses max_seq_length rather than max_prompt_length/max_length
+    max_length=512,
     learning_rate=2e-5,
-    max_steps=100,                # train by optimizer steps (like your current script)
+    max_steps=100,
     logging_steps=1,
     logging_strategy="steps",
     bf16=True,
-    dataset_text_field="text"
-  )
+    dataset_text_field="text")
 
   trainer = SFTTrainer(
     model=model,
@@ -84,7 +81,6 @@ def main(settings_file):
   trainer.train()
   trainer.save_model("SFT")
   tokenizer.save_pretrained("SFT")
-
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()

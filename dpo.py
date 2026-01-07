@@ -205,6 +205,8 @@ def main(settings_file):
     train_dataset=train_dataset)
 
   trainer.train()
+  trainer.save_model(training_args.output_dir)
+  tokenizer.save_pretrained(training_args.output_dir)
 
 if __name__ == "__main__":
 
