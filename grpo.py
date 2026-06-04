@@ -3,9 +3,13 @@ import time
 import torch
 from datasets import load_dataset
 from math_verify import LatexExtractionConfig, parse, verify
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import GRPOConfig, GRPOTrainer
+
+#
+# Based on https://huggingface.co/learn/cookbook/en/fine_tuning_llm_grpo_trl
+#
 
 # ==========================================
 # 1. SETUP & CONFIGURATION
@@ -134,18 +138,29 @@ print("\n--- Evaluating Trained Model Performance ---")
 trained_tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
 # Reload the locally trained model adapter weights
-trained_model = AutoModelForCausalLM.from_pretrained(
-    OUTPUT_DIR,
-    torch_dtype="auto",
-    device_map="auto",
-)
+# trained_model = AutoModelForCausalLM.from_pretrained(
+#     OUTPUT_DIR,
+#     torch_dtype="auto",
+#     device_map="auto",
+# )
 
+# claude tells me that this is the way to go
+# otherwise not obiouvs if the adapter is merged with the base model
+base_model = AutoModelForCausalLM.from_pretrained(
+    MODEL_ID,
+    torch_dtype="auto",
+    device_map="auto")
+trained_model = PeftModel.from_pretrained(base_model, OUTPUT_DIR)
 
 def generate_with_reasoning(prompt):
     """Utility function to measure generation lengths and latency."""
-    # Build the linear prompt string from the dataset schema
-    prompt_text = " ".join(entry['content'] for entry in prompt)
 
+    # Build the linear prompt string from the dataset schema
+    # prompt_text = " ".join(entry['content'] for entry in prompt)
+    # inputs = trained_tokenizer(prompt_text, return_tensors="pt").to(trained_model.device)
+
+    # claude didn't like the two lines above and suggest the lines below instead
+    prompt_text = trained_tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
     inputs = trained_tokenizer(prompt_text, return_tensors="pt").to(trained_model.device)
 
     start_time = time.time()
@@ -163,7 +178,7 @@ def generate_with_reasoning(prompt):
 
 
 # Evaluate on the first sample of our test dataset split
-test_prompt = test_dataset['prompt'][0]
+test_prompt = test_dataset['prompt'][3]
 generated_text, inference_duration, num_generated_tokens = generate_with_reasoning(test_prompt)
 
 print("\n--- Generated Output ---")
