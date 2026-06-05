@@ -36,9 +36,9 @@ def extract_answer(answer_text):
 
     match = re.search(r'####\s*(.*?)(?:\n|$)', answer_text)
     if match:
-        return match.group(1).strip()
+        return match.group(1).strip().replace(',', '')
 
-    return answer_text.strip()
+    return answer_text.strip().replace(',', '')
 
 def make_conversation(example):
     """Chat template stuff"""
@@ -53,6 +53,7 @@ test_dataset = test_dataset.map(make_conversation)
 
 # Clean out unused structural columns (keeping 'answer' and 'prompt')
 train_dataset = train_dataset.remove_columns(['question'])
+test_dataset = test_dataset.remove_columns(['question'])
 
 print(f"Loading baseline model: {MODEL_ID}...")
 model = AutoModelForCausalLM.from_pretrained(
@@ -96,7 +97,7 @@ def accuracy_reward(completions, **kwargs):
 
         if numbers:
             predicted_answer = numbers[-1]  # Take the last number
-            if predicted_answer.strip() == ground_truth.replace(',', '').strip():
+            if predicted_answer.strip() == ground_truth.strip():
                 rewards.append(1.0)
             else:
                 rewards.append(0.0)
@@ -151,7 +152,7 @@ def generate_with_reasoning(prompt):
 
     start_time = time.time()
     with torch.no_grad():
-        output_ids = trained_model.generate(**inputs, max_length=500)
+        output_ids = trained_model.generate(**inputs, max_new_tokens=512)
     end_time = time.time()
 
     generated_text = trained_tokenizer.decode(output_ids[0], skip_special_tokens=True)
