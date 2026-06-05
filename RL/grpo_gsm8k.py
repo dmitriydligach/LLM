@@ -6,18 +6,21 @@ from peft import LoraConfig, get_peft_model, PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import GRPOConfig, GRPOTrainer
 
+# Todo:
+#
+# Add a formal evaluation at the end using the official scoring metric for this dataset
+# Add token count to the sample examples
+#
+
 #
 # Based on https://huggingface.co/learn/cookbook/en/fine_tuning_llm_grpo_trl
 # Modified to use GSM8K dataset for easier interpretability
 #
 
-# ==========================================
-# 1. SETUP & CONFIGURATION
-# ==========================================
-MODEL_ID = "Qwen/Qwen2-0.5B-Instruct"
+MODEL_ID = "/home1/shared/Models/Llama-3.2-1B-Instruct"
 DATASET_ID = "openai/gsm8k"
 DATASET_CONFIG = "main"
-OUTPUT_DIR = "Qwen2-0.5B-GRPO-GSM8K"
+OUTPUT_DIR = "Model"
 
 SYSTEM_PROMPT = (
     "A conversation between User and Assistant. The user asks a math question, and the Assistant solves it. "
@@ -25,39 +28,32 @@ SYSTEM_PROMPT = (
     "The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., "
     "<think> reasoning process here </think><answer> numerical answer here </answer>")
 
-# ==========================================
-# 2. LOAD & PREPARE DATASET
-# ==========================================
 print(f"Loading dataset: {DATASET_ID}...")
-# Loading only 5% slice as per the cookbook workflow
 train_dataset, test_dataset = load_dataset(DATASET_ID, DATASET_CONFIG, split=['train[:50%]', 'test[:50%]'])
-
 
 def extract_answer(answer_text):
     """Extract the numerical answer from GSM8K format: 'reasoning ... #### answer'"""
+
     match = re.search(r'####\s*(.*?)(?:\n|$)', answer_text)
     if match:
         return match.group(1).strip()
+
     return answer_text.strip()
 
-
 def make_conversation(example):
+    """Chat template stuff"""
+
     return {"prompt": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": example["question"]},],
             "answer": extract_answer(example["answer"])}
 
-
-print("Mapping chat structures...")
 train_dataset = train_dataset.map(make_conversation)
 test_dataset = test_dataset.map(make_conversation)
 
 # Clean out unused structural columns (keeping 'answer' and 'prompt')
 train_dataset = train_dataset.remove_columns(['question'])
 
-# ==========================================
-# 3. INITIALIZE MODEL & CONFIG LORA
-# ==========================================
 print(f"Loading baseline model: {MODEL_ID}...")
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_ID,
@@ -75,19 +71,18 @@ print("Applying LoRA parameters...")
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
 
-# ==========================================
-# 4. DEFINE REWARD FUNCTIONS
-# ==========================================
 def format_reward(completions, **kwargs):
     """Reward function that checks if the completion has the required <think>/<answer> format."""
+
     pattern = r"^<think>.*?</think>\s*<answer>.*?</answer>$"
     completion_contents = [completion[0]["content"] for completion in completions]
     matches = [re.match(pattern, content, re.DOTALL) for content in completion_contents]
-    return [1.0 if match else 0.0 for match in matches]
 
+    return [1.0 if match else 0.0 for match in matches]
 
 def accuracy_reward(completions, **kwargs):
     """Reward function that checks if the completion matches the ground truth answer."""
+
     answers = kwargs['answer']
     completion_contents = [completion[0]["content"] for completion in completions]
     rewards = []
@@ -110,9 +105,6 @@ def accuracy_reward(completions, **kwargs):
 
     return rewards
 
-# ==========================================
-# 5. GRPO TRAINING CONFIGURATION
-# ==========================================
 training_args = GRPOConfig(
     output_dir=OUTPUT_DIR,
     learning_rate=1e-5,
@@ -120,18 +112,14 @@ training_args = GRPOConfig(
     gradient_accumulation_steps=16,
     num_train_epochs=1,
     bf16=True,
-    max_completion_length=512,  # GSM8K multi-step reasoning needs room; 256 risks truncating before </answer>
-    num_generations=4,  # Default: 8
+    max_completion_length=512,
+    num_generations=8,
     report_to=["tensorboard"],
     logging_steps=10,
     push_to_hub=False,  # Modified to False for seamless local scripting
     save_strategy="steps",
-    save_steps=10,
-)
+    save_steps=10)
 
-# ==========================================
-# 6. INITIATE TRAINING
-# ==========================================
 trainer = GRPOTrainer(
     model=model,
     reward_funcs=[format_reward, accuracy_reward],
@@ -145,9 +133,6 @@ trainer.train()
 print(f"Saving fine-tuned model checkpoint to {OUTPUT_DIR}...")
 trainer.save_model(training_args.output_dir)
 
-# ==========================================
-# 7. PERFORMANCE EVALUATION
-# ==========================================
 print("\n--- Evaluating Trained Model Performance ---")
 trained_tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
@@ -176,7 +161,6 @@ def generate_with_reasoning(prompt):
     num_generated_tokens = output_ids.shape[1] - num_input_tokens
 
     return generated_text, inference_duration, num_generated_tokens
-
 
 # Evaluate on a few samples from our test dataset split
 print("\n--- Evaluating on test samples ---")
