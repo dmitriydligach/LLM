@@ -54,7 +54,8 @@ def evaluate(model, tokenizer, dataset):
         with torch.no_grad():
             output_ids = model.generate(**inputs, max_new_tokens=512, do_sample=False)
 
-        generated_text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
+        input_length = inputs['input_ids'].shape[1]
+        generated_text = tokenizer.decode(output_ids[0][input_length:], skip_special_tokens=True)
         predicted = extract_predicted_answer(generated_text)
 
         if predicted is not None and predicted.strip() == example['answer'].strip():

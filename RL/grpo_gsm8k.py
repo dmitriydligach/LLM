@@ -21,7 +21,7 @@ SYSTEM_PROMPT = (
     "<think> reasoning process here </think><answer> numerical answer here </answer>")
 
 print(f"Loading dataset: {DATASET_ID}...")
-train_dataset, test_dataset = load_dataset(DATASET_ID, DATASET_CONFIG, split=['train[:50%]', 'test[:50%]'])
+train_dataset = load_dataset(DATASET_ID, DATASET_CONFIG, split='train')
 
 def extract_answer(answer_text):
     """Extract the numerical answer from GSM8K format: 'reasoning ... #### answer'"""
@@ -41,11 +41,9 @@ def make_conversation(example):
             "answer": extract_answer(example["answer"])}
 
 train_dataset = train_dataset.map(make_conversation)
-test_dataset = test_dataset.map(make_conversation)
 
 # Clean out unused structural columns (keeping 'answer' and 'prompt')
 train_dataset = train_dataset.remove_columns(['question'])
-test_dataset = test_dataset.remove_columns(['question'])
 
 print(f"Loading baseline model: {MODEL_ID}...")
 model = AutoModelForCausalLM.from_pretrained(
@@ -58,7 +56,7 @@ lora_config = LoraConfig(
     r=8,
     lora_alpha=32,
     lora_dropout=0.1,
-    target_modules=["q_proj", "v_proj"],)
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],)
 
 print("Applying LoRA parameters...")
 model = get_peft_model(model, lora_config)
@@ -102,10 +100,10 @@ training_args = GRPOConfig(
     output_dir=OUTPUT_DIR,
     learning_rate=1e-5,
     remove_unused_columns=False,  # Vital context to keep 'answer' column for accuracy_reward
-    gradient_accumulation_steps=16,
+    gradient_accumulation_steps=8,
     num_train_epochs=1,
     bf16=True,
-    max_completion_length=512,
+    max_completion_length=256,
     num_generations=8,
     report_to=["tensorboard"],
     logging_steps=10,
