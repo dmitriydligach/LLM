@@ -1,16 +1,8 @@
 import re
-import time
-import torch
 from datasets import load_dataset
-from peft import LoraConfig, get_peft_model, PeftModel
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import LoraConfig, get_peft_model
+from transformers import AutoModelForCausalLM
 from trl import GRPOConfig, GRPOTrainer
-
-# Todo:
-#
-# Add a formal evaluation at the end using the official scoring metric for this dataset
-# Add token count to the sample examples
-#
 
 #
 # Based on https://huggingface.co/learn/cookbook/en/fine_tuning_llm_grpo_trl
@@ -133,46 +125,3 @@ trainer.train()
 
 print(f"Saving fine-tuned model checkpoint to {OUTPUT_DIR}...")
 trainer.save_model(training_args.output_dir)
-
-print("\n--- Evaluating Trained Model Performance ---")
-trained_tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-
-# Reload the locally trained model adapter weights
-base_model = AutoModelForCausalLM.from_pretrained(
-    MODEL_ID,
-    torch_dtype="auto",
-    device_map="auto")
-trained_model = PeftModel.from_pretrained(base_model, OUTPUT_DIR)
-
-def generate_with_reasoning(prompt):
-    """Utility function to measure generation lengths and latency."""
-
-    prompt_text = trained_tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
-    inputs = trained_tokenizer(prompt_text, return_tensors="pt").to(trained_model.device)
-
-    start_time = time.time()
-    with torch.no_grad():
-        output_ids = trained_model.generate(**inputs, max_new_tokens=512)
-    end_time = time.time()
-
-    generated_text = trained_tokenizer.decode(output_ids[0], skip_special_tokens=True)
-    inference_duration = end_time - start_time
-
-    num_input_tokens = inputs['input_ids'].shape[1]
-    num_generated_tokens = output_ids.shape[1] - num_input_tokens
-
-    return generated_text, inference_duration, num_generated_tokens
-
-# Evaluate on a few samples from our test dataset split
-print("\n--- Evaluating on test samples ---")
-num_samples = min(3, len(test_dataset))
-for idx in range(num_samples):
-    test_prompt = test_dataset['prompt'][idx]
-    test_answer = test_dataset['answer'][idx]
-    generated_text, inference_duration, num_generated_tokens = generate_with_reasoning(test_prompt)
-
-    print(f"\n--- Sample {idx + 1} ---")
-    print(f"Expected answer: {test_answer}")
-    print(f"Generated output:\n{generated_text}")
-    print(f"Inference time: {inference_duration:.2f} seconds")
-    print(f"Generated tokens: {num_generated_tokens}")
