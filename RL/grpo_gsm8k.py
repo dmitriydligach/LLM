@@ -48,8 +48,7 @@ train_dataset = train_dataset.remove_columns(['question'])
 print(f"Loading baseline model: {MODEL_ID}...")
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_ID,
-    torch_dtype="auto",
-    device_map="auto",)
+    torch_dtype="auto")
 
 lora_config = LoraConfig(
     task_type="CAUSAL_LM",
