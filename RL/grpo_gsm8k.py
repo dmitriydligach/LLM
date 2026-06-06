@@ -3,43 +3,17 @@ from datasets import load_dataset
 from peft import LoraConfig, get_peft_model
 from transformers import AutoModelForCausalLM
 from trl import GRPOConfig, GRPOTrainer
+from gsm8k_utils import MODEL_ID, DATASET_ID, DATASET_CONFIG, make_conversation, extract_predicted_answer
 
 #
 # Based on https://huggingface.co/learn/cookbook/en/fine_tuning_llm_grpo_trl
 # Modified to use GSM8K dataset for easier interpretability
 #
 
-MODEL_ID = "/home1/shared/Models/Llama-3.2-1B-Instruct"
-DATASET_ID = "openai/gsm8k"
-DATASET_CONFIG = "main"
 OUTPUT_DIR = "Model"
-
-SYSTEM_PROMPT = (
-    "A conversation between User and Assistant. The user asks a math question, and the Assistant solves it. "
-    "The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. "
-    "The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., "
-    "<think> reasoning process here </think><answer> numerical answer here </answer>")
 
 print(f"Loading dataset: {DATASET_ID}...")
 train_dataset = load_dataset(DATASET_ID, DATASET_CONFIG, split='train')
-
-def extract_answer(answer_text):
-    """Extract the numerical answer from GSM8K format: 'reasoning ... #### answer'"""
-
-    match = re.search(r'####\s*(.*?)(?:\n|$)', answer_text)
-    if match:
-        return match.group(1).strip().replace(',', '')
-
-    return answer_text.strip().replace(',', '')
-
-def make_conversation(example):
-    """Chat template stuff"""
-
-    return {"prompt": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": example["question"]},],
-            "answer": extract_answer(example["answer"])}
-
 train_dataset = train_dataset.map(make_conversation)
 
 # Clean out unused structural columns (keeping 'answer' and 'prompt')
@@ -78,18 +52,10 @@ def accuracy_reward(completions, **kwargs):
     rewards = []
 
     for content, ground_truth in zip(completion_contents, answers):
-        # Strip commas (e.g. "1,234" -> "1234") before comparing
-        # Try to find the answer inside <answer> tags first, fall back to last number in response
-        answer_match = re.search(r'<answer>(.*?)</answer>', content, re.DOTALL)
-        search_text = answer_match.group(1) if answer_match else content
-        numbers = re.findall(r'-?\d+(?:\.\d+)?', search_text.replace(',', ''))
+        predicted_answer = extract_predicted_answer(content)
 
-        if numbers:
-            predicted_answer = numbers[-1]  # Take the last number
-            if predicted_answer.strip() == ground_truth.strip():
-                rewards.append(1.0)
-            else:
-                rewards.append(0.0)
+        if predicted_answer is not None and predicted_answer.strip() == ground_truth.strip():
+            rewards.append(1.0)
         else:
             rewards.append(0.0)
 
