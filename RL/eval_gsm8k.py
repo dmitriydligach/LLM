@@ -19,7 +19,7 @@ def evaluate(model, tokenizer, dataset):
         inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
 
         with torch.no_grad():
-            output_ids = model.generate(**inputs, max_new_tokens=512, do_sample=False,
+            output_ids = model.generate(**inputs, max_new_tokens=1024, do_sample=False,
                                         pad_token_id=tokenizer.eos_token_id)
 
         input_length = inputs['input_ids'].shape[1]

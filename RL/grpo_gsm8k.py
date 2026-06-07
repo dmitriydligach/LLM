@@ -26,10 +26,11 @@ model = AutoModelForCausalLM.from_pretrained(
 
 lora_config = LoraConfig(
     task_type="CAUSAL_LM",
-    r=8,
-    lora_alpha=32,
+    r=32,
+    lora_alpha=64,
     lora_dropout=0.1,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],)
+    # target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],)
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"])
 
 print("Applying LoRA parameters...")
 model = get_peft_model(model, lora_config)
@@ -68,8 +69,8 @@ training_args = GRPOConfig(
     gradient_accumulation_steps=8,
     num_train_epochs=1,
     bf16=True,
-    max_completion_length=256,
-    num_generations=8,
+    max_completion_length=1024,
+    num_generations=16,
     report_to=["tensorboard"],
     logging_steps=10,
     push_to_hub=False,  # Modified to False for seamless local scripting
