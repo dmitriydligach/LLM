@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import os, argparse, utils, torch
+import os, argparse, torch
+from Lib import utils
 from datasets import Dataset
 from trl import SFTConfig, SFTTrainer
 from transformers import AutoTokenizer, AutoModelForCausalLM

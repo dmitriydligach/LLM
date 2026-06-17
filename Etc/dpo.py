@@ -5,7 +5,8 @@ The prompt may contain a file, e.g.
 [/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!
 """
 
-import os, argparse, utils, torch
+import os, argparse, torch
+from Lib import utils
 from datasets import load_dataset
 from trl import DPOConfig, DPOTrainer
 from transformers import AutoTokenizer, AutoModelForCausalLM

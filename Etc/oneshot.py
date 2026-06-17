@@ -5,7 +5,8 @@ The prompt may contain a file, e.g.
 [/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!
 """
 
-import transformers, torch, os, argparse, requests, utils
+import transformers, torch, os, argparse, requests
+from Lib import utils
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from bs4 import BeautifulSoup
 
