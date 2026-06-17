@@ -33,7 +33,7 @@ def main(settings_file):
     quantization_config=quant_config,
     device_map=settings['device_map'])
 
-  if 'adapter_path' in settings:
+  if settings.get('adapter_path'):
     print(f"Loading adapter: {settings['adapter_path']}")
     model = PeftModel.from_pretrained(model, settings['adapter_path'])
 
