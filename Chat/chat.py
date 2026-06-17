@@ -12,8 +12,6 @@ from peft import PeftModel
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
-logging.getLogger('transformers').addFilter(
-  lambda r: 'clean_up_tokenization_spaces' not in r.getMessage())
 
 def main(settings_file):
   """Chat with Llama"""
@@ -26,7 +24,7 @@ def main(settings_file):
     bnb_4bit_use_double_quant=True,
     bnb_4bit_quant_type= 'nf4')
 
-  tokenizer = AutoTokenizer.from_pretrained(settings['model_path'])
+  tokenizer = AutoTokenizer.from_pretrained(settings['model_path'], clean_up_tokenization_spaces=False)
 
   model = AutoModelForCausalLM.from_pretrained(
     settings['model_path'],
