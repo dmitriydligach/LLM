@@ -51,7 +51,7 @@ def make_sft_dataset(tokenizer, n: int = 25) -> Dataset:
   return Dataset.from_list(rows)
 
 def main(settings_file):
-  settings = utils.read_json_file(settings_file)
+  settings = utils.read_yaml_file(settings_file)
 
   tokenizer = AutoTokenizer.from_pretrained(settings["model_path"])
 
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     "--settings",
     type=str,
     help="LLM configuration file",
-    default="settings.json",
+    default="settings.yaml",
   )
   args = parser.parse_args()
   main(args.settings)

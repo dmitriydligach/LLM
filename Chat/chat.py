@@ -5,7 +5,7 @@ The prompt may contain a file, e.g.
 [/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!
 """
 
-import transformers, torch, os, json, argparse, logging, utils
+import transformers, torch, os, argparse, logging, utils
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 from peft import PeftModel
 
@@ -18,7 +18,7 @@ logging.getLogger('transformers').addFilter(
 def main(settings_file):
   """Chat with Llama"""
 
-  settings = utils.read_json_file(settings_file)
+  settings = utils.read_yaml_file(settings_file)
 
   quant_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     '--settings',
     type=str,
     help='LLM configuration file',
-    default='settings.json')
+    default='settings.yaml')
   args = parser.parse_args()
 
   main(args.settings)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, json, argparse, requests, pdfminer
+import os, yaml, argparse, requests, pdfminer
 from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_text
 
@@ -26,12 +26,11 @@ def resolve_prompt(input_text: str) -> str:
 
   return input_text[:start] + '\n\n' + text + '\n' + input_text[end+1:]
 
-def read_json_file(settings_json_file):
+def read_yaml_file(settings_yaml_file):
   """Read generation and other parameters"""
 
-  with open(settings_json_file, 'r') as file:
-    data = json.load(file)
-  return data
+  with open(settings_yaml_file, 'r') as file:
+    return yaml.safe_load(file)
 
 def get_page_text(url: str) -> str:
   """Fetch a web page and return its visible text"""

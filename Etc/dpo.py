@@ -173,7 +173,7 @@ def make_refusal_dpo_dataset_ultrafeedback_style(n: int = 25) -> Dataset:
 def main(settings_file):
   """Chat with Llama"""
 
-  settings = utils.read_json_file(settings_file)
+  settings = utils.read_yaml_file(settings_file)
 
   tokenizer = AutoTokenizer.from_pretrained(settings['model_path'])
 
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     '--settings',
     type=str,
     help='LLM configuration file',
-    default='settings.json')
+    default='settings.yaml')
   args = parser.parse_args()
 
   main(args.settings)
