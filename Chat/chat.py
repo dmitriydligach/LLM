@@ -5,12 +5,15 @@ The prompt may contain a file, e.g.
 [/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!
 """
 
-import transformers, torch, os, json, argparse, utils
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+import transformers, torch, os, json, argparse, logging, utils
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
+from peft import PeftModel
 
-# suppress tensorflow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
+logging.getLogger('transformers').addFilter(
+  lambda r: 'clean_up_tokenization_spaces' not in r.getMessage())
 
 def main(settings_file):
   """Chat with Llama"""
@@ -30,13 +33,16 @@ def main(settings_file):
     quantization_config=quant_config,
     device_map=settings['device_map'])
 
+  if 'adapter_path' in settings:
+    print(f"Loading adapter: {settings['adapter_path']}")
+    model = PeftModel.from_pretrained(model, settings['adapter_path'])
+
   generator = transformers.pipeline(
     task='text-generation',
     model=model,
     tokenizer=tokenizer,
-    torch_dtype=torch.bfloat16,
-    device_map=settings['device_map'],
-    pad_token_id=tokenizer.eos_token_id)
+    dtype=torch.bfloat16,
+    device_map=settings['device_map'])
 
   conversation = [{'role': 'system', 'content': settings['sys_prompt']}]
 
@@ -45,12 +51,14 @@ def main(settings_file):
     user_input = utils.resolve_prompt(user_input)
     conversation.append({'role': 'user', 'content': user_input})
 
-    output = generator(
-      conversation,
+    gen_config = GenerationConfig(
       do_sample=settings['do_sample'],
       temperature=settings['temperature'],
       top_p=settings['top_p'],
-      max_new_tokens=settings['max_new_tokens'])
+      max_new_tokens=settings['max_new_tokens'],
+      pad_token_id=tokenizer.eos_token_id)
+
+    output = generator(conversation, generation_config=gen_config)
 
     conversation = output[0]['generated_text']
     print('\n' + conversation[-1]['content'])

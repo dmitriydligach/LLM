@@ -1,6 +1,7 @@
 {
     "sys_prompt": "You are a helpful assistant. You give short and precise answers.",
     "model_path": "/home1/shared/Models/Llama-3.2-1B-Instruct",
+    "adapter_path": "../Sft/Output",
     "device_map": {"": "cuda:7"},
     "do_sample": true,
     "temperature": 1.0,
