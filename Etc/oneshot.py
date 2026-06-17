@@ -70,7 +70,7 @@ if __name__ == "__main__":
     '--settings',
     type=str,
     help='LLM configuration file',
-    default='settings.yaml')
+    default='config.yaml')
   args = parser.parse_args()
 
   main(args.settings)
