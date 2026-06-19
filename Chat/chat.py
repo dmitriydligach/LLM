@@ -5,7 +5,8 @@ The prompt may contain a file, e.g.
 [/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!
 """
 
-import transformers, torch, os, argparse, logging
+import transformers, torch, os, argparse, logging, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Lib import utils
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 from peft import PeftModel
@@ -19,13 +20,15 @@ def main(settings_file):
 
   settings = utils.read_yaml_file(settings_file)
 
-  quant_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_compute_dtype=torch.bfloat16,
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_quant_type= 'nf4')
-
   tokenizer = AutoTokenizer.from_pretrained(settings['model_path'], clean_up_tokenization_spaces=False)
+
+  quant_config = None
+  if settings.get('quantize'):
+    quant_config = BitsAndBytesConfig(
+      load_in_4bit=True,
+      bnb_4bit_compute_dtype=torch.bfloat16,
+      bnb_4bit_use_double_quant=True,
+      bnb_4bit_quant_type='nf4')
 
   model = AutoModelForCausalLM.from_pretrained(
     settings['model_path'],
@@ -66,10 +69,10 @@ if __name__ == "__main__":
 
   parser = argparse.ArgumentParser()
   parser.add_argument(
-    '--settings',
+    '--config-file',
     type=str,
     help='LLM configuration file',
     default='config.yaml')
   args = parser.parse_args()
 
-  main(args.settings)
+  main(args.config_file)
