@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
-import transformers, torch, os, json
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+import transformers, torch, os
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 
 # suppress tensorflow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
-model_path1 = '/home1/shared/Models/Llama3.1/Llama-3.1-8B-Instruct'
-model_path2 = '/home1/shared/Models/Llama3.1/Llama-3.1-8B-Instruct'
+transformers.logging.set_verbosity_error()
+
+model_path1 = '/home1/shared/Models/Llama-3.2-1B-Instruct'
+model_path2 = '/home1/shared/Models/Llama-3.2-3B-Instruct'
 
 do_sample = True
 temperature = 1.0
@@ -35,58 +37,66 @@ def main():
     bnb_4bit_use_double_quant=True,
     bnb_4bit_quant_type= 'nf4')
 
-  tokenizer1 = AutoTokenizer.from_pretrained(model_path1)
-  tokenizer2 = AutoTokenizer.from_pretrained(model_path2)
+  tokenizer1 = AutoTokenizer.from_pretrained(model_path1, clean_up_tokenization_spaces=False)
+  tokenizer2 = AutoTokenizer.from_pretrained(model_path2, clean_up_tokenization_spaces=False)
 
   model1 = AutoModelForCausalLM.from_pretrained(
     model_path1,
     quantization_config=quant_config,
     device_map=device_map1)
+
   generator1 = transformers.pipeline(
     task='text-generation',
     model=model1,
     tokenizer=tokenizer1,
-    torch_dtype=torch.bfloat16,
-    device_map=device_map1,
-    pad_token_id=tokenizer1.eos_token_id)
+    dtype=torch.bfloat16,
+    device_map=device_map1)
 
   model2 = AutoModelForCausalLM.from_pretrained(
     model_path2,
     quantization_config=quant_config,
     device_map=device_map2)
+
   generator2 = transformers.pipeline(
     task='text-generation',
     model=model2,
     tokenizer=tokenizer2,
-    torch_dtype=torch.bfloat16,
-    device_map=device_map2,
-    pad_token_id=tokenizer2.eos_token_id)
+    dtype=torch.bfloat16,
+    device_map=device_map2)
+
+  gen_config1 = GenerationConfig(
+    do_sample=do_sample,
+    temperature=temperature,
+    top_p=top_p,
+    max_new_tokens=max_new_tokens,
+    max_length=None,
+    pad_token_id=tokenizer1.eos_token_id,
+    eos_token_id=[tokenizer1.eos_token_id, tokenizer1.convert_tokens_to_ids('<|eot_id|>')])
+
+  gen_config2 = GenerationConfig(
+    do_sample=do_sample,
+    temperature=temperature,
+    top_p=top_p,
+    max_new_tokens=max_new_tokens,
+    max_length=None,
+    pad_token_id=tokenizer2.eos_token_id,
+    eos_token_id=[tokenizer2.eos_token_id, tokenizer2.convert_tokens_to_ids('<|eot_id|>')])
 
   conversation1 = [{'role': 'system', 'content': sys_prompt1}]
   conversation2 = [{'role': 'system', 'content': sys_prompt2}]
 
   conversation1.append({'role': 'user', 'content': init_prompt})
-  conversation2.append({'role': 'user', 'content': init_prompt})
 
-  while True:
-    output1 = generator1(
-      conversation1,
-      do_sample=do_sample,
-      temperature=temperature,
-      top_p=top_p,
-      max_new_tokens=max_new_tokens)
+  max_turns = 50
+  for _ in range(max_turns):
+    output1 = generator1(conversation1, generation_config=gen_config1)
 
     conversation1 = output1[0]['generated_text']
     print('\nA: ' + conversation1[-1]['content'])
 
     conversation2.append({'role': 'user', 'content': conversation1[-1]['content']})
 
-    output2 = generator2(
-      conversation2,
-      do_sample=do_sample,
-      temperature=temperature,
-      top_p=top_p,
-      max_new_tokens=max_new_tokens)
+    output2 = generator2(conversation2, generation_config=gen_config2)
 
     conversation2 = output2[0]['generated_text']
     print('\nB: ' + conversation2[-1]['content'])
