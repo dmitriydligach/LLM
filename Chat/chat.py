@@ -5,7 +5,11 @@ The prompt may contain a file, e.g.
 [/home/dima/Data/MimicIII/Discharge/Text/160090_discharge.txt]. Summarize!
 """
 
-import transformers, torch, os, argparse, logging, sys
+import logging
+# hide PyTorch's harmless "Redirects are currently not supported in MacOs" note
+logging.getLogger('torch.distributed.elastic.multiprocessing.redirects').setLevel(logging.ERROR)
+
+import transformers, torch, os, argparse, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Lib import utils
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
@@ -14,6 +18,7 @@ from peft import PeftModel
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
+transformers.logging.set_verbosity_error()
 
 def main(settings_file):
   """Chat with Llama"""
@@ -57,10 +62,15 @@ def main(settings_file):
       do_sample=settings['do_sample'],
       temperature=settings['temperature'],
       top_p=settings['top_p'],
+      top_k=settings.get('top_k'),
       max_new_tokens=settings['max_new_tokens'],
       pad_token_id=tokenizer.eos_token_id)
 
-    output = generator(conversation, generation_config=gen_config)
+    template_kwargs = {}
+    if 'enable_thinking' in settings:
+      template_kwargs['enable_thinking'] = settings['enable_thinking']
+
+    output = generator(conversation, generation_config=gen_config, tokenizer_encode_kwargs=template_kwargs)
 
     conversation = output[0]['generated_text']
     print('\n' + conversation[-1]['content'])
@@ -72,7 +82,7 @@ if __name__ == "__main__":
     '--config-file',
     type=str,
     help='LLM configuration file',
-    default='config.yaml')
+    default='mac.yaml')
   args = parser.parse_args()
 
   main(args.config_file)
