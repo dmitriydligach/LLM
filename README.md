@@ -1,5 +1,4 @@
-# LLM Playground
+# To do
 
-Go play with other kids
-
-Virtual environment is in the same directory
+* Add markdown support to chat.py and other scripts
+* Add quantization to speed up
