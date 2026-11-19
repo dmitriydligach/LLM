@@ -1,0 +1,6 @@
+model_path: "/Users/Dima/Work/Models/Qwen3.5-0.8B-Base/"
+do_sample: true
+temperature: 0.7
+top_p: 0.9
+max_new_tokens: 200
+device_map: "mps"
