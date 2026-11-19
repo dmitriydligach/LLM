@@ -14,6 +14,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Lib import utils
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, GenerationConfig
 from peft import PeftModel
+from rich.console import Console
+from rich.markdown import Markdown
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
@@ -51,6 +53,8 @@ def main(settings_file):
     dtype=torch.bfloat16,
     device_map=settings['device_map'])
 
+  console = Console()
+
   conversation = [{'role': 'system', 'content': settings['sys_prompt']}]
 
   while True:
@@ -73,7 +77,8 @@ def main(settings_file):
     output = generator(conversation, generation_config=gen_config, tokenizer_encode_kwargs=template_kwargs)
 
     conversation = output[0]['generated_text']
-    print('\n' + conversation[-1]['content'])
+    console.print()
+    console.print(Markdown(conversation[-1]['content']))
 
 if __name__ == "__main__":
 
